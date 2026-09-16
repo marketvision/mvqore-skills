@@ -114,7 +114,7 @@ referrer attribution, posts on submit.
 | `source` | `"mvqore-sdk"` | Recorded as `lead_source` |
 | `requireReferrer` | `true` | Reject submissions with no referrer |
 | `captchaToken` | read from form | Friendly Captcha token |
-| `onSuccess` / `onError` | — | Called after submit |
+| `onSuccess` / `onError` | — | Called when the SDK handles the form's own submit event. A failure with no `onError` is logged to the console rather than left as an unhandled rejection. Calling `submit()` yourself returns a promise instead. |
 
 Returns `{ form, submit(overrides?), destroy() }`. `submit()` also works for a
 custom button; `destroy()` detaches the listener.
