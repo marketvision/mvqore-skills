@@ -1,0 +1,20 @@
+{
+  "name": "mvqore-skills",
+  "owner": {
+    "name": "MarketVision",
+    "url": "https://github.com/marketvision"
+  },
+  "description": "Claude Code plugins for building Shopify themes on MV Qore.",
+  "plugins": [
+    {
+      "name": "mvqore-sdk",
+      "source": "./plugins/mvqore-sdk",
+      "displayName": "MV Qore SDK",
+      "description": "Build referral features into a custom Shopify theme with the MV Qore JS SDK: referrer toolbars, lead capture forms, cart sharing and QR codes.",
+      "version": "1.0.0",
+      "author": { "name": "MarketVision" },
+      "keywords": ["shopify", "theme", "referral", "mvqore", "lead-capture"],
+      "category": "integrations"
+    }
+  ]
+}
