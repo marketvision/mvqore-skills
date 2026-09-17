@@ -10,23 +10,15 @@ tags: [shopify, theme, referral, mvqore, lead-capture]
 custom theme gets the same behaviour as the app embeds while owning all of its
 own markup and design.
 
-**Use MV Qore's own markup and stylesheet.** A custom theme built with this skill
-should look like a store running the MV Qore app embeds, so reproduce the embed's
-structure and class names exactly and load `mvqore.css` — do not restyle these
-blocks in the theme's design system. Complete markup for every block is in
-[reference/recipes.md](reference/recipes.md); copy it, then place your own layout
-around it.
-
-The SDK provides the behaviour; the markup and CSS come from MV Qore.
+**The division of labour: the SDK provides data and behaviour, you write the
+markup.** There are no MV Qore components to drop in and no CSS to match. Build
+the UI in the theme's own design system and call the SDK for everything else.
 
 ## Load it
 
 One tag per page, before any code that uses it:
 
 ```liquid
-<link rel="stylesheet" href="{{ routes.root }}apps/proxy/sdk/v1/mvqore.css">
-<link rel="stylesheet" href="{{ routes.root }}apps/proxy/mv-qore/fa/css/all.min.css">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
 <script src="{{ routes.root }}apps/proxy/sdk/v1/mvqore-sdk.js" defer></script>
 <script>
   document.addEventListener("DOMContentLoaded", async () => {
@@ -63,7 +55,6 @@ a referrer is worse than no toolbar.
 
 ### Referrer toolbar
 
-Full markup: [recipes.md #1](reference/recipes.md). 
 The bar has two states: a prompt when nobody is attributed, and the merchant's
 configured title when someone is. Both strings come from the merchant's admin
 settings, so read them rather than hardcoding copy.
@@ -103,7 +94,6 @@ if you try. `clearReferrer()` undoes it.
 
 ### Lead capture form
 
-Full markup: [recipes.md #2](reference/recipes.md). 
 Write whatever fields the design calls for, then hand the form to the SDK:
 
 ```js
@@ -171,14 +161,6 @@ SDK manages. A hand-written `fetch` to it will be rejected as "not our form".
 
 **`generateShareUrl` returns `null` for an empty cart**, so check before
 destructuring.
-
-**MV Qore ids are singletons.** `#simple-modal`, `#referrerInput` and
-`#referrerModalHandler` are referenced by id, so render each block once per page.
-A section dropped in twice produces duplicate ids and the second copy will not
-work.
-
-**The stylesheet is ~56 KB and pulls in an icon font.** That is the cost of
-matching the app embeds exactly. Load it once per page, not per section.
 
 ## Error codes
 
