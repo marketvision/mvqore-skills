@@ -5,9 +5,53 @@ design system; the SDK calls are the part to keep.
 
 ---
 
+## 0. Site-wide setup and attribution capture
+
+`layout/theme.liquid` — once for the whole theme. Everything else assumes this is
+in place.
+
+```liquid
+<script src="{{ routes.root }}apps/proxy/sdk/v1/mvqore-sdk.js" defer></script>
+<script>
+  document.addEventListener("DOMContentLoaded", async () => {
+    MVQore.init({
+      shop: {{ shop.permanent_domain | json }},
+      locale: {{ request.locale.iso_code | default: 'en' | json }}
+    });
+
+    // A referral link can land on ANY page, so this belongs in the layout rather
+    // than in the toolbar section. getActiveReferrer() resolves the referrer but
+    // does not store it; persistReferrer() is what writes localStorage and tags
+    // the cart, which is what order attribution reads later.
+    //
+    // Gated on ?ref= deliberately: persistReferrer posts to /cart/update.js, so
+    // calling it on every page load would add a cart write to every page view.
+    if (new URLSearchParams(location.search).has("ref")) {
+      try {
+        const active = await MVQore.getActiveReferrer();
+        if (active) MVQore.persistReferrer(active);
+      } catch (e) {
+        // An invalid ?ref= is not worth breaking the page over.
+        console.warn("[MVQore] could not capture referrer:", e);
+      }
+    }
+  });
+</script>
+```
+
+Sections then use the already-loaded `MVQore` global and do not include their own
+script tag. (Including one is safe — the SDK ignores a second load — but it costs
+a second parse for nothing.)
+
+---
+
 ## 1. Referrer toolbar with code modal
 
-`sections/mvqore-referrer-bar.liquid`
+`sections/mvqore-referrer-bar.liquid` — displays the current referrer and lets a
+visitor enter a code. Attribution from `?ref=` is captured in the layout
+(recipe 0), not here.
+
+
 
 ```liquid
 {%- assign brand = shop.metafields.mvqore.brand_color.value | default: '#000000' -%}

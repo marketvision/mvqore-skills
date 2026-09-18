@@ -68,6 +68,9 @@ Resolves the referrer for this visitor: validates `?ref=` when present and not
 already fresh, otherwise falls back to what is stored. Returns the same shape as
 `validateReferrer`, or `null` when there is no referrer. Never rejects.
 
+**It does not persist anything.** Pass the result to `persistReferrer()` to
+record the attribution — see recipe 0 for the site-wide capture.
+
 ### persistReferrer(result, options?)
 
 Stores the referrer and tags the cart. Pass the object returned by

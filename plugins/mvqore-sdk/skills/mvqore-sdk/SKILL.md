@@ -18,6 +18,10 @@ the UI in the theme's own design system and call the SDK for everything else.
 
 One tag per page, before any code that uses it:
 
+Put this in **`theme.liquid`**, once — not per template and not per section.
+A referral link can land on any page (a product, the blog, the homepage), so the
+SDK has to be present everywhere for attribution to be captured.
+
 ```liquid
 <script src="{{ routes.root }}apps/proxy/sdk/v1/mvqore-sdk.js" defer></script>
 <script>
@@ -26,7 +30,16 @@ One tag per page, before any code that uses it:
       shop: {{ shop.permanent_domain | json }},
       locale: {{ request.locale.iso_code | default: 'en' | json }}
     });
-    // ...your code
+
+    // Capture attribution from ?ref= on whatever page the visitor landed on.
+    // getActiveReferrer() only RESOLVES a referrer -- persisting is a separate
+    // call, so without this the referrer shows in the UI and is never recorded.
+    // Gated on ?ref= because persistReferrer also tags the cart, and doing that
+    // on every page load would fire a /cart/update.js request every time.
+    if (new URLSearchParams(location.search).has("ref")) {
+      const active = await MVQore.getActiveReferrer();
+      if (active) MVQore.persistReferrer(active);
+    }
   });
 </script>
 ```
@@ -158,6 +171,11 @@ SDK manages. A hand-written `fetch` to it will be rejected as "not our form".
 **If the MV Qore app embed is also enabled on this theme**, the SDK defers to it:
 `persistReferrer` skips its own writes so the cart is not tagged twice, and
 `importSharedCart` joins the embed's guard. You do not need to detect this.
+
+**`getActiveReferrer()` does not store anything.** It resolves who the referrer
+is; `persistReferrer()` is what writes storage and tags the cart. A page that
+only calls `getActiveReferrer` will display a referrer and record no attribution
+— see the site-wide capture in "Load it".
 
 **`generateShareUrl` returns `null` for an empty cart**, so check before
 destructuring.
