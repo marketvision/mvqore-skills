@@ -130,13 +130,6 @@ Field names read from the form (each also as `customer[...]`): `email`,
 `first_name`/`firstName`, `last_name`/`lastName`, `phone`, `country_code`,
 `accepts_marketing`, `accepts_sms_marketing`, `frc-captcha-response`.
 
-### createLeadSession(options?) → { submit(fields) }
-
-Same options, for flows with no `<form>`. **Timing starts when the session is
-created**, so create it when the UI appears, not at submit time. `submit()` takes
-`{ email, firstName, lastName, phone, countryCode, acceptsMarketing,
-acceptsSmsMarketing, tags, source, referrerCode, referrerId }`.
-
 ---
 
 ## Cart sharing

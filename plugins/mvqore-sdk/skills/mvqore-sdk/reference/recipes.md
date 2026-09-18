@@ -183,27 +183,7 @@ To submit without an active referrer, pass `requireReferrer: false`.
 
 ---
 
-## 3. Multi-step flow (no form element)
-
-```js
-const session = MVQore.createLeadSession({ tags: ["newsletter"], source: "multi-step-signup" });
-// Created when the flow opens — the anti-bot timer starts here, so the time the
-// user spends working through the steps counts toward it.
-
-const collected = {};
-// ...steps collect fields...
-
-try {
-  await session.submit({ email: collected.email, firstName: collected.name });
-  showConfirmation();
-} catch (e) {
-  showError(e.code === "EMAIL_IN_USE" ? "You're already with us" : "Try again");
-}
-```
-
----
-
-## 4. Share cart button with QR
+## 3. Share cart button with QR
 
 ```liquid
 <button type="button" data-mvq-share hidden>Share my cart</button>
@@ -237,7 +217,7 @@ try {
 
 ---
 
-## 5. Receiving a shared cart
+## 4. Receiving a shared cart
 
 On the page share links point at (`/pages/share-cart` by default):
 

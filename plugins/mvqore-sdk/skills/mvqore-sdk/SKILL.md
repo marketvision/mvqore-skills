@@ -125,15 +125,6 @@ active referrer and posts. Recognised field names are `email`, `first_name`,
 `last_name`, `phone`, `country_code`, `accepts_marketing`,
 `accepts_sms_marketing` — each also accepted as `customer[...]`.
 
-For a flow with no `<form>` (a multi-step signup, or a custom widget), start a
-session when the UI appears and submit the collected fields later:
-
-```js
-const session = MVQore.createLeadSession({ tags: ["newsletter"], source: "multi-step-signup" });
-// ...the user works through the steps...
-await session.submit({ email, firstName });
-```
-
 ### Share cart and QR
 
 ```js
