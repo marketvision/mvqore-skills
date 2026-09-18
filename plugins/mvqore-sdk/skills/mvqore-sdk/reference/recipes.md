@@ -158,8 +158,8 @@ visitor enter a code. Attribution from `?ref=` is captured in the layout
     if (bot.enabled && bot.siteKey) mountFriendlyCaptcha(form, bot.siteKey);
 
     MVQore.attachLeadForm(form, {
-      tags: ["quiz", "flavor-finder"],
-      source: "find-your-flavor",
+      tags: ["newsletter", "spring-promo"],
+      source: "homepage-form",
       onSuccess: () => { form.hidden = true; thanks.hidden = false; },
       onError: (e) => {
         error.textContent = {
@@ -183,19 +183,19 @@ To submit without an active referrer, pass `requireReferrer: false`.
 
 ---
 
-## 3. Multi-step quiz (no form element)
+## 3. Multi-step flow (no form element)
 
 ```js
-const session = MVQore.createLeadSession({ tags: ["quiz"], source: "flavor-quiz" });
-// Created when the quiz opens — the anti-bot timer starts here, so the user
-// answering questions counts toward it.
+const session = MVQore.createLeadSession({ tags: ["newsletter"], source: "multi-step-signup" });
+// Created when the flow opens — the anti-bot timer starts here, so the time the
+// user spends working through the steps counts toward it.
 
-const answers = {};
-// ...steps collect answers...
+const collected = {};
+// ...steps collect fields...
 
 try {
-  await session.submit({ email: answers.email, firstName: answers.name });
-  showResults();
+  await session.submit({ email: collected.email, firstName: collected.name });
+  showConfirmation();
 } catch (e) {
   showError(e.code === "EMAIL_IN_USE" ? "You're already with us" : "Try again");
 }

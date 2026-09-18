@@ -18,7 +18,7 @@ custom Shopify theme: referrer toolbars, lead capture forms with customer tags,
 cart sharing, QR codes and referrer attribution. Ask in plain language, e.g.:
 
 - "Add an MV Qore referrer toolbar to the header"
-- "Put an MV Qore lead form in this section, tagged `lead` and `flavor-finder`"
+- "Put an MV Qore lead form in this section, tagged `lead` and `spring-promo`"
 - "Add a share-this-cart button with a QR code"
 
 ## Requirements

@@ -111,8 +111,8 @@ Write whatever fields the design calls for, then hand the form to the SDK:
 
 ```js
 MVQore.attachLeadForm("#lead-form", {
-  tags: ["quiz", "flavor-finder"],     // customer tags, array or string
-  source: "find-your-flavor",
+  tags: ["newsletter", "spring-promo"], // customer tags, array or string
+  source: "homepage-form",
   onSuccess: () => showThanks(),
   onError: (e) => showError(e.code === "EMAIL_IN_USE"
     ? "You're already signed up"
@@ -125,12 +125,12 @@ active referrer and posts. Recognised field names are `email`, `first_name`,
 `last_name`, `phone`, `country_code`, `accepts_marketing`,
 `accepts_sms_marketing` — each also accepted as `customer[...]`.
 
-For a flow with no `<form>` (a multi-step quiz), start a session when the UI
-appears and submit collected answers later:
+For a flow with no `<form>` (a multi-step signup, or a custom widget), start a
+session when the UI appears and submit the collected fields later:
 
 ```js
-const session = MVQore.createLeadSession({ tags: ["quiz"], source: "flavor-quiz" });
-// ...user answers questions...
+const session = MVQore.createLeadSession({ tags: ["newsletter"], source: "multi-step-signup" });
+// ...the user works through the steps...
 await session.submit({ email, firstName });
 ```
 
