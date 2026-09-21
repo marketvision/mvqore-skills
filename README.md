@@ -31,10 +31,13 @@ Updates are fetched in the background after Claude Code starts; run
 
 `mvqore-sdk` teaches Claude Code how to build MV Qore referral features into a
 custom Shopify theme: referrer toolbars, lead capture forms with customer tags,
-cart sharing, QR codes and referrer attribution. Ask in plain language, e.g.:
+Create Account forms with auto-login, a referrer's favorite products, cart
+sharing, QR codes and referrer attribution. Ask in plain language, e.g.:
 
 - "Add an MV Qore referrer toolbar to the header"
 - "Put an MV Qore lead form in this section, tagged `lead` and `spring-promo`"
+- "Add an MV Qore Create Account form to the register page"
+- "Show the referrer's favorite products on the home page"
 - "Add a share-this-cart button with a QR code"
 
 ## Requirements

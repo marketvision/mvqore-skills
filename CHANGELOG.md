@@ -4,9 +4,9 @@ Versions track the `mvqore-sdk` plugin. Bump `version` in both
 `plugins/mvqore-sdk/.claude-plugin/plugin.json` and
 `.claude-plugin/marketplace.json` with every release.
 
-## Unreleased
+## 1.1.0
 
-Ship only after the matching SDK and server changes are deployed:
+Requires the MV Qore app release of 2026-09-21, which serves the matching SDK.
 
 - `attachRegistrationForm()` for Create Account forms, with auto-login via `startAutoLogin()`
   (no `tags` option: the merchant's Create Account tag is applied server-side)
