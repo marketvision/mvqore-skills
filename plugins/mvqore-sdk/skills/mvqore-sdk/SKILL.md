@@ -1,13 +1,13 @@
 ---
 name: mvqore-sdk
-description: Build MV Qore referral features into a custom Shopify theme — referrer toolbar, referrer code input, lead capture forms with customer tags, cart sharing, QR codes, referrer attribution. Use whenever a Shopify theme needs referral, referrer, affiliate attribution, "who referred you", lead capture, share cart or MV Qore functionality.
+description: Build MV Qore referral features into a custom Shopify theme — referrer toolbar, referrer code input, lead capture forms with customer tags, Create Account forms with auto-login, a referrer's favorite products, cart sharing, QR codes, referrer attribution. Use whenever a Shopify theme needs referral, referrer, affiliate attribution, "who referred you", lead capture, account registration, favorite products, share cart or MV Qore functionality.
 tags: [shopify, theme, referral, mvqore, lead-capture]
 ---
 
 # MV Qore SDK
 
 `window.MVQore` exposes MV Qore's referral functions to any Shopify theme, so a
-custom theme gets the same behaviour as the app embeds while owning all of its
+custom theme gets the same behaviour as MV Qore's theme blocks while owning all of its
 own markup and design.
 
 **The division of labour: the SDK provides data and behaviour, you write the
@@ -111,7 +111,7 @@ Write whatever fields the design calls for, then hand the form to the SDK:
 
 ```js
 MVQore.attachLeadForm("#lead-form", {
-  tags: ["newsletter", "spring-promo"], // customer tags, array or string
+  tags: ["newsletter", "spring-promo"], // added alongside mvqore_lead
   source: "homepage-form",
   onSuccess: () => showThanks(),
   onError: (e) => showError(e.code === "EMAIL_IN_USE"
@@ -124,6 +124,56 @@ The SDK takes over submit, adds the honeypot, times the render, attaches the
 active referrer and posts. Recognised field names are `email`, `first_name`,
 `last_name`, `phone`, `country_code`, `accepts_marketing`,
 `accepts_sms_marketing` — each also accepted as `customer[...]`.
+
+Every lead is tagged `mvqore_lead` server-side, whatever `tags` you pass. That
+tag is what puts the customer in the merchant's Leads list, so never try to
+remove it.
+
+### Create Account form
+
+```js
+MVQore.attachRegistrationForm("#register-form", {
+  returnTo: "/account",
+  onSuccess: (r) => {
+    if (!r.autoLogin.started) location.href = "/account/login"; // no silent sign-in
+  },
+  onError: (e) => showError(e.code === "EMAIL_IN_USE"
+    ? "You already have an account"
+    : "Something went wrong"),
+});
+```
+
+Same fields as the lead form, plus a `terms_accepted` checkbox. No `tags`: the
+merchant's configured Create Account tag is applied for you. After a
+successful registration the SDK signs the customer in and redirects them. This
+works only when the store uses MV Qore's identity provider. Otherwise
+`autoLogin.started` is false and the theme sends the customer to login. To show
+a message before the redirect, pass `autoLogin: false`, then call
+`MVQore.startAutoLogin(r.autoLoginTicket)` within two minutes.
+
+### "I don't have a referrer" option
+
+If the merchant enabled Referrer Bypass, offer their default code as a choice:
+
+```js
+const { referrerBypass } = (await MVQore.getSettings()) ?? {};
+if (referrerBypass?.enabled) {
+  skipButton.textContent = referrerBypass.label;
+  skipButton.onclick = async () =>
+    MVQore.persistReferrer(await MVQore.validateReferrer(referrerBypass.defaultCode));
+}
+```
+
+### Favorite products
+
+```js
+const { products } = await MVQore.getFavoriteProducts();
+if (!products.length) section.hidden = true;
+else section.innerHTML = products.map(renderProductCard).join("");
+```
+
+This returns the active referrer's picks, filtered to the shopper's market. Build
+the cards in the theme's own product-card markup.
 
 ### Share cart and QR
 
@@ -159,14 +209,22 @@ are rejected server-side.
 **Do not hand-roll the lead POST.** The endpoint is fail-closed on bot signals the
 SDK manages. A hand-written `fetch` to it will be rejected as "not our form".
 
-**If the MV Qore app embed is also enabled on this theme**, the SDK defers to it:
-`persistReferrer` skips its own writes so the cart is not tagged twice, and
-`importSharedCart` joins the embed's guard. You do not need to detect this.
+**MV Qore's theme blocks can share a page with the SDK.** If the Referrer Code
+block is on the page, it saves the referrer and the SDK skips its own save, so
+the cart is not tagged twice. The Lead OptIn and Free Registration blocks don't
+save referrers, so with those the SDK saves it. Either way the SDK checks that
+the save happened, so you do not need to detect which blocks are present. If the
+theme draws all of its referrer UI itself, call
+`MVQore.init({ themeOwnsReferrerUI: true })` so no block reacts to it.
 
 **`getActiveReferrer()` does not store anything.** It resolves who the referrer
 is; `persistReferrer()` is what writes storage and tags the cart. A page that
 only calls `getActiveReferrer` will display a referrer and record no attribution
 — see the site-wide capture in "Load it".
+
+**Load the SDK on the home page if you use auto-login.** Sign-in passes through
+the home page on its way back from MV Qore's login service, and the SDK finishes
+it there. Without the SDK on that page, the customer is left signed out.
 
 **`generateShareUrl` returns `null` for an empty cart**, so check before
 destructuring.
@@ -183,11 +241,15 @@ Every function rejects with `{ code, message }`. `getStatus`, `getSettings` and
 | `REFERRER_DATA_NOT_FOUND` | Referrer exists but has no usable record |
 | `MISSING_EMAIL` | Lead submitted with no email |
 | `LEAD_TOO_FAST` | Submitted under 5s after render (see above) |
+| `REGISTRATION_TOO_FAST` | Same, for a Create Account form |
 | `REFERRER_REQUIRED` | No referrer to attribute the lead to; pass `requireReferrer: false` to allow |
 | `EMAIL_IN_USE` | Already a customer — show this on the email field |
+| `PHONE_IN_USE` | Phone belongs to another customer — show this on the phone field |
 | `LEAD_REJECTED` | Rejected server-side (bot guard or captcha) |
+| `REGISTRATION_REJECTED` | Same, for a Create Account form |
 | `INVALID_SHARE_LINK` | `share_cart` payload malformed |
 | `CART_ADD_FAILED` | Shopify refused the shared line items |
+| `FAVORITES_UNAVAILABLE` | Favorite products could not be loaded |
 | `NETWORK_ERROR` | Request never completed |
 
 ## Full API

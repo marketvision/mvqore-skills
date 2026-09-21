@@ -15,6 +15,10 @@ MVQore.init({ shop: "store.myshopify.com", locale: "en" })
 Optional. `shop` defaults to `Shopify.shop`, `locale` to `"en"`. Call once per
 page before other functions.
 
+`themeOwnsReferrerUI` (default `false`): when `true`, `persistReferrer` and
+`clearReferrer` always write from the SDK and never notify MV Qore blocks. See
+`persistReferrer`.
+
 ---
 
 ## Status and settings
@@ -35,7 +39,17 @@ could not reach the app".
 
 Returns the merchant's storefront settings (toolbar copy, display mode, cookie
 and share-cart settings), or `null` if they cannot be read. One request per page
-no matter how many callers ask, shared with the app embed when both are present.
+no matter how many callers ask, shared with MV Qore's theme blocks when both are present.
+
+`referrerBypass` is the merchant's Referrer Bypass setting, or `null` when the
+store has none:
+
+```js
+{ enabled: true, label: "I don't have one", defaultCode: "rootacme" }
+```
+
+Offer `label` as a choice only when `enabled` is true. To use it, validate and
+persist `defaultCode` like any other code.
 
 ### getBotProtection() → Promise
 
@@ -78,14 +92,29 @@ Stores the referrer and tags the cart. Pass the object returned by
 `result.referrer`, which throws, because the flattened view drops fields other MV
 Qore code reads back.
 
-Skips its own writes when the app embed is on the page (the embed does them).
+Returns `"sdk"` when the SDK saved the referrer, or `"listener"` when MV Qore's
+Referrer Code block on the page saved it. The SDK announces the referrer, then
+checks whether the block actually saved it. If not, the SDK saves it itself.
+Other MV Qore blocks on the page cannot stop the save. A console warning says
+which path ran.
+
 Skips the cart write on `/pages/share-cart` so an in-flight import is not
-clobbered. `options.extensionOwnsWrite` is for the app embed itself; themes do
-not need it.
+clobbered.
 
-### clearReferrer()
+| Option | Meaning |
+|---|---|
+| `forceWrite` | Always save from the SDK, and don't announce it to MV Qore blocks |
+| `extensionOwnsWrite` | For the Referrer Code block itself; themes do not need it |
 
-Removes the stored referrer and clears the cart attribute.
+`init({ themeOwnsReferrerUI: true })` applies `forceWrite` to every call. Use it
+when the theme draws every referrer UI and no MV Qore block should react.
+
+### clearReferrer(options?)
+
+Removes the stored referrer and clears the cart attribute. It works the same way
+as `persistReferrer`: MV Qore blocks on the page are told first, so their UI
+resets. If none of them cleared the referrer, the SDK clears it. Returns `"sdk"`
+or `"listener"`. Takes `{ forceWrite }`.
 
 ---
 
@@ -113,7 +142,7 @@ referrer attribution, posts on submit.
 
 | Option | Default | Meaning |
 |---|---|---|
-| `tags` | `null` | Customer tags — array or comma string |
+| `tags` | `null` | Customer tags — array or comma string. Merged with `mvqore_lead`, which the server always adds |
 | `source` | `"mvqore-sdk"` | Recorded as `lead_source` |
 | `requireReferrer` | `true` | Reject submissions with no referrer |
 | `captchaToken` | read from form | Friendly Captcha token |
@@ -122,13 +151,60 @@ referrer attribution, posts on submit.
 Returns `{ form, submit(overrides?), destroy() }`. `submit()` also works for a
 custom button; `destroy()` detaches the listener.
 
-Resolves `{ submitted: true, email, referrerCode, tags, data }`. Rejects with
+Resolves `{ submitted: true, email, referrerCode, tags, autoLoginTicket, data }`.
+Pass `autoLoginTicket` to `startAutoLogin` to sign the new customer in. Rejects with
 `MISSING_EMAIL`, `LEAD_TOO_FAST`, `REFERRER_REQUIRED`, `EMAIL_IN_USE`,
 `LEAD_REJECTED` or `NETWORK_ERROR`.
 
 Field names read from the form (each also as `customer[...]`): `email`,
 `first_name`/`firstName`, `last_name`/`lastName`, `phone`, `country_code`,
 `accepts_marketing`, `accepts_sms_marketing`, `frc-captcha-response`.
+
+---
+
+## Account creation
+
+### attachRegistrationForm(formOrSelector, options?) → controller
+
+The Create Account form. Works like `attachLeadForm`, with the same honeypot,
+timing, captcha and referrer attribution, and the same options except `tags`, plus:
+
+| Option | Default | Meaning |
+|---|---|---|
+| `autoLogin` | `true` | Sign the new customer in straight after registering (see `startAutoLogin`) |
+| `returnTo` | current page | Storefront path the customer lands on once signed in |
+
+There is no `tags` option: the server applies the merchant's configured Create
+Account tag, and nothing else. Passing `tags` logs a warning and has no effect.
+Custom tags are only for lead forms. `terms_accepted` is read from the form as a
+checkbox.
+
+Resolves `{ submitted: true, email, referrerCode, autoLoginTicket, autoLogin, data }`,
+where `autoLogin` is what `startAutoLogin` resolved. With auto-login on,
+`onSuccess` can run while the page is already navigating away. Rejects with
+`MISSING_EMAIL`, `REGISTRATION_TOO_FAST`, `REFERRER_REQUIRED`, `EMAIL_IN_USE`,
+`PHONE_IN_USE`, `REGISTRATION_REJECTED` or `NETWORK_ERROR`.
+
+### startAutoLogin(ticket, options?) → Promise
+
+```js
+{ started: true }                                // browser is navigating
+{ started: false, reason: "IDP_DISABLED" }        // show a normal login link instead
+```
+
+Signs in a customer who has just registered, without a password. Pass
+`result.autoLoginTicket` from `attachRegistrationForm` or `attachLeadForm`.
+The ticket works once and expires after two minutes. Takes `{ returnTo }`.
+
+This only works when the store uses MV Qore's identity provider for customer
+accounts. It takes two redirects: to MV Qore's login service, back to the
+storefront home page, then on to Shopify's customer login, which signs the
+customer in silently. The SDK does the second redirect when it loads, so the SDK
+must be loaded on the home page. The site-wide load in SKILL.md covers this.
+
+Never rejects. `reason` is `NO_TICKET`, `IDP_DISABLED`, `TICKET_EXPIRED`,
+`AUTO_LOGIN_UNAVAILABLE`, `STORAGE_UNAVAILABLE` or `NETWORK_ERROR`. In every
+case the account exists, so fall back to a login link.
 
 ---
 
@@ -170,6 +246,29 @@ write any UI — the theme decides what happens next.
 `dataUrl` suits an `<img src>`; `markup` is inline SVG. Throws on empty input, an
 unknown `ecLevel`, an unsupported `format`, or a `target` selector that matches
 nothing. The encoder is bundled — do not load a QR library.
+
+---
+
+## Favorite products
+
+### getFavoriteProducts(options?) → Promise
+
+```js
+{ products: [{ id, title, handle, image, imageAlt, price, availableVariant, totalVariants, label, color }], referrerCode: "ANA10" }
+```
+
+The products a referrer picked as favorites, at most 10, for the theme to render
+in its own markup. By default this is the active referrer's list. With no active
+referrer, it is the logged-in customer's own list.
+
+| Option | Default | Meaning |
+|---|---|---|
+| `country` | `Shopify.country` | Market to filter by; products not sold there are left out |
+| `forCustomer` | `false` | Return the logged-in customer's own list even when a referrer is active |
+
+Resolves `{ products: [] }` when there is nothing to show (no referrer and no
+logged-in customer, or no favorites), so hide the section on an empty list.
+Rejects with `FAVORITES_UNAVAILABLE` or `NETWORK_ERROR`.
 
 ---
 
