@@ -4,6 +4,23 @@ Versions track the `mvqore-sdk` plugin. Bump `version` in both
 `plugins/mvqore-sdk/.claude-plugin/plugin.json` and
 `.claude-plugin/marketplace.json` with every release.
 
+## 1.2.0
+
+Requires the MV Qore app release of 2026-10-02, which serves the matching SDK.
+
+- Application forms: inputs named `mvqore_form.<key>` on lead and Create Account
+  forms are saved to the new customer's `mvqore_form` metafields, in the same
+  step that creates the customer
+- `attachCustomerFieldsForm()` for a logged-in customer: saves the same fields
+  to their existing record without creating a customer, writing the answers
+  before the tags
+- Create Account forms take `tags`, limited to the store's allowlist (previously
+  `tags` was ignored with a warning)
+- Tags on every form are checked against the allowlist in MV Qore admin → More →
+  Application form, once the merchant has saved one
+- New error codes for field-level rejections. Errors carry `field` naming the
+  input that caused them
+
 ## 1.1.0
 
 Requires the MV Qore app release of 2026-09-21, which serves the matching SDK.

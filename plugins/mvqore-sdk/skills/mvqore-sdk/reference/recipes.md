@@ -238,3 +238,134 @@ if (result.imported) {
 `importSharedCart` replaces the current cart by default so the link reproduces
 the sender's cart exactly; pass `{ clear: false }` to merge instead. It never
 redirects — that is the theme's decision.
+
+---
+
+## 5. Application form with custom customer fields
+
+`sections/mvqore-application.liquid`. This is one section for both new and
+logged-in applicants. The answers are saved to `mvqore_form` customer
+metafields, and the tag can trigger a Shopify Flow that emails the application
+to staff.
+
+It assumes the merchant has already created these customer metafield
+definitions in Shopify admin (Settings → Custom data → Customers) and added the
+tag to the allowlist in MV Qore admin (More → Application form):
+
+| Definition | Type |
+|---|---|
+| `mvqore_form.license_number` | Single line text |
+| `mvqore_form.years_experience` | Integer |
+| `mvqore_form.specialties` | List of single line text, with choices |
+| `mvqore_form.about` | Multi-line text |
+
+```liquid
+{%- capture application_fields -%}
+  <label>Licence number
+    <input name="mvqore_form.license_number" required>
+  </label>
+  <label>Years of experience
+    <input name="mvqore_form.years_experience" type="number" min="0" step="1">
+  </label>
+  <fieldset>
+    <legend>Specialties</legend>
+    <label><input type="checkbox" name="mvqore_form.specialties" value="keto"> Keto</label>
+    <label><input type="checkbox" name="mvqore_form.specialties" value="fitness"> Fitness</label>
+  </fieldset>
+  <label>About your practice
+    <textarea name="mvqore_form.about" maxlength="5000"></textarea>
+  </label>
+  <p class="mvq-apply__consent">
+    We store these answers on your customer account to review your application.
+  </p>
+{%- endcapture -%}
+
+<div class="mvq-apply" data-mvq-apply hidden>
+  {% if customer %}
+    <form data-mvq-apply-form="existing" novalidate>
+      <p>Applying as {{ customer.email | escape }}</p>
+      {{ application_fields }}
+      <button type="submit">Submit application</button>
+      <p class="mvq-apply__error" data-mvq-apply-error hidden></p>
+    </form>
+  {% else %}
+    <form data-mvq-apply-form="new" novalidate>
+      <input type="text"  name="first_name" placeholder="First name" autocomplete="given-name" required>
+      <input type="text"  name="last_name"  placeholder="Last name"  autocomplete="family-name" required>
+      <input type="email" name="email"      placeholder="Email"      autocomplete="email" required>
+      {{ application_fields }}
+      <button type="submit">Submit application</button>
+      <p class="mvq-apply__error" data-mvq-apply-error hidden></p>
+    </form>
+  {% endif %}
+  <p class="mvq-apply__thanks" data-mvq-apply-thanks hidden>
+    Thanks. We'll review your application and be in touch.
+  </p>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", async () => {
+    const root   = document.querySelector("[data-mvq-apply]");
+    const form   = root.querySelector("[data-mvq-apply-form]");
+    const error  = root.querySelector("[data-mvq-apply-error]");
+    const thanks = root.querySelector("[data-mvq-apply-thanks]");
+
+    const status = await MVQore.getStatus();
+    if (!status.installed || !status.configured) return;  // leave it hidden
+    root.hidden = false;
+
+    const MESSAGES = {
+      EMAIL_IN_USE: "You already have an account. Please log in to apply.",
+      NOT_LOGGED_IN: "Your session ended. Please log in again.",
+      TRY_AGAIN: "We couldn't save your application just now. Please try again.",
+      RATE_LIMITED: "Too many attempts. Please wait a minute.",
+      INVALID_VALUE: "Please check this answer.",
+      INVALID_CHOICE: "Please pick one of the listed options.",
+      VALUE_TOO_LONG: "This answer is too long.",
+    };
+
+    function showError(e) {
+      form.querySelectorAll("[aria-invalid]").forEach((el) => el.removeAttribute("aria-invalid"));
+      // `field` is the metafield key; mark the inputs that feed it.
+      if (e.field && e.field !== "tags") {
+        form.querySelectorAll(`[name="mvqore_form.${e.field}"]`)
+          .forEach((el) => el.setAttribute("aria-invalid", "true"));
+      }
+      error.textContent = MESSAGES[e.code] || "Something went wrong. Please try again.";
+      error.hidden = false;
+    }
+
+    const options = {
+      tags: ["mvqore-application-submitted"],
+      onSuccess: () => { form.hidden = true; thanks.hidden = false; },
+      onError: showError,
+    };
+
+    if (form.dataset.mvqApplyForm === "existing") {
+      // Updates the logged-in customer; creates nothing.
+      MVQore.attachCustomerFieldsForm(form, options);
+    } else {
+      // Creates the customer with the answers and the tag in one step.
+      // Mount the captcha first if the merchant has bot protection on.
+      const bot = await MVQore.getBotProtection();
+      if (bot.enabled && bot.siteKey) mountFriendlyCaptcha(form, bot.siteKey);
+      MVQore.attachLeadForm(form, { ...options, source: "application-form", requireReferrer: false });
+    }
+  });
+</script>
+```
+
+Notes:
+
+- **`EMAIL_IN_USE` on the new-customer form means the applicant already has an
+  account.** Ask them to log in, which switches them to the logged-in form. The
+  server never adds answers to an existing customer based on an email typed into
+  a form.
+- **Use `attachRegistrationForm` instead of `attachLeadForm`** if a new applicant
+  should get an account and be signed in. The fields and `tags` work the same
+  way.
+- **Keep the tag that triggers staff review separate from any tag that grants
+  access or pricing.** The form adds the trigger tag only; staff, or a Flow
+  after review, add the status tag.
+- **Don't ask for sensitive data** such as ID numbers without the merchant's
+  sign-off. Everything entered is stored on the customer record.

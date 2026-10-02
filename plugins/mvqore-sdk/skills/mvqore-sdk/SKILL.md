@@ -1,6 +1,6 @@
 ---
 name: mvqore-sdk
-description: Build MV Qore referral features into a custom Shopify theme — referrer toolbar, referrer code input, lead capture forms with customer tags, Create Account forms with auto-login, a referrer's favorite products, cart sharing, QR codes, referrer attribution. Use whenever a Shopify theme needs referral, referrer, affiliate attribution, "who referred you", lead capture, account registration, favorite products, share cart or MV Qore functionality.
+description: Build MV Qore referral features into a custom Shopify theme — referrer toolbar, referrer code input, lead capture forms with customer tags, Create Account forms with auto-login, application forms that save extra answers to customer metafields, a referrer's favorite products, cart sharing, QR codes, referrer attribution. Use whenever a Shopify theme needs referral, referrer, affiliate attribution, "who referred you", lead capture, account registration, an application or sign-up form with custom fields, favorite products, share cart or MV Qore functionality.
 tags: [shopify, theme, referral, mvqore, lead-capture]
 ---
 
@@ -143,13 +143,83 @@ MVQore.attachRegistrationForm("#register-form", {
 });
 ```
 
-Same fields as the lead form, plus a `terms_accepted` checkbox. No `tags`: the
-merchant's configured Create Account tag is applied for you. After a
+Same fields as the lead form, plus a `terms_accepted` checkbox. The merchant's
+configured Create Account tag is applied for you; `tags` can add more, but only
+tags on the store's allowlist (see "Application form"). After a
 successful registration the SDK signs the customer in and redirects them. This
 works only when the store uses MV Qore's identity provider. Otherwise
 `autoLogin.started` is false and the theme sends the customer to login. To show
 a message before the redirect, pass `autoLogin: false`, then call
 `MVQore.startAutoLogin(r.autoLoginTicket)` within two minutes.
+
+### Application form (custom customer fields)
+
+An application form collects answers beyond name and email: a licence number,
+years of experience, specialties. Each answer is saved to a customer metafield
+in the `mvqore_form` namespace, and the form can add a tag (for example to
+trigger a Shopify Flow that emails the application to staff).
+
+**Name each extra input `mvqore_form.<key>`.** The SDK collects every such input
+and sends it with the submission; there is no list of fields to configure in
+code.
+
+```html
+<input name="mvqore_form.license_number" required>
+<input name="mvqore_form.years_experience" type="number">
+<label><input type="checkbox" name="mvqore_form.specialties" value="keto"> Keto</label>
+<label><input type="checkbox" name="mvqore_form.specialties" value="fitness"> Fitness</label>
+```
+
+The page has two states. Render both, and let Liquid pick:
+
+```liquid
+{% if customer %}
+  {%- comment -%} Logged in: only the mvqore_form.* inputs. No name or email. {%- endcomment -%}
+  <form id="apply-existing">…mvqore_form inputs…</form>
+{% else %}
+  {%- comment -%} New customer: the full form plus the same mvqore_form.* inputs. {%- endcomment -%}
+  <form id="apply-new">…email, first_name, … and the mvqore_form inputs…</form>
+{% endif %}
+```
+
+```js
+const TAGS = ["mvqore-application-submitted"];
+
+// New customer: the customer is created with the answers and the tag in one go.
+// attachRegistrationForm works the same way if the applicant should get an account.
+MVQore.attachLeadForm("#apply-new", { tags: TAGS, requireReferrer: false, onSuccess, onError });
+
+// Logged-in customer: updates their existing record; no customer is created.
+MVQore.attachCustomerFieldsForm("#apply-existing", { tags: TAGS, onSuccess, onError });
+```
+
+Check `e.field` in `onError` to mark the input that was rejected. The server
+saves the answers before it adds the tag, so a Flow triggered by the tag always
+sees them.
+
+The merchant sets up two things in advance, outside the theme:
+
+- **One metafield definition per field.** In Shopify admin, go to Settings →
+  Custom data → Customers, and create it with namespace and key
+  `mvqore_form.<key>`. An input with no definition is rejected with
+  `UNKNOWN_FIELD`, and the definition's type decides what values are valid.
+- **The allowed tags.** In MV Qore admin, go to More → Application form. A tag not
+  on that list is rejected with `TAG_NOT_ALLOWED`.
+
+Types a form can write: single-line and multi-line text, integer, decimal,
+true/false, date, URL, and a list of single-line text. Shopify has no email
+metafield type, so use single-line text for an email field. File uploads are not
+supported.
+
+How each kind of input is sent:
+
+| Input | Value sent |
+|---|---|
+| Text, textarea, number, date, `<select>` | Its trimmed value |
+| A single checkbox | `true` or `false` (for a true/false field) |
+| Several checkboxes with the same name | The checked values as a list |
+| Radio buttons | The checked value |
+| `<select multiple>` | The selected values as a list |
 
 ### "I don't have a referrer" option
 
@@ -229,10 +299,25 @@ it there. Without the SDK on that page, the customer is left signed out.
 **`generateShareUrl` returns `null` for an empty cart**, so check before
 destructuring.
 
+**Tags depend on the store's allowlist** (MV Qore admin → More → Application
+form). Until the merchant saves a list:
+
+- lead forms accept any tag, as they always have
+- Create Account forms ignore `tags`
+- `attachCustomerFieldsForm` rejects every tag
+
+Once a list is saved, every form rejects a tag that is not on it with
+`TAG_NOT_ALLOWED`. Before relying on a tag, confirm it is on the list.
+
+**A blank optional answer never erases a stored one.** Empty `mvqore_form`
+inputs are skipped rather than saved as empty. A resubmission overwrites the
+previous answers, except for fields the merchant marked "keep existing value".
+
 ## Error codes
 
-Every function rejects with `{ code, message }`. `getStatus`, `getSettings` and
-`getBotProtection` never reject — they resolve to a safe value instead.
+Every function rejects with `{ code, message }`, plus `field` when one input
+caused it. `getStatus`, `getSettings` and `getBotProtection` never reject — they
+resolve to a safe value instead.
 
 | Code | Meaning |
 |---|---|
@@ -247,6 +332,19 @@ Every function rejects with `{ code, message }`. `getStatus`, `getSettings` and
 | `PHONE_IN_USE` | Phone belongs to another customer — show this on the phone field |
 | `LEAD_REJECTED` | Rejected server-side (bot guard or captcha) |
 | `REGISTRATION_REJECTED` | Same, for a Create Account form |
+| `FIELDS_TOO_FAST` | Same, for `attachCustomerFieldsForm` |
+| `UNKNOWN_FIELD` | A `mvqore_form.<key>` input has no metafield definition; `field` names it |
+| `INVALID_VALUE` | An answer does not fit its field's type (not a number, not a date…) |
+| `INVALID_CHOICE` | An answer is not one of the field's allowed choices |
+| `VALUE_TOO_LONG` | Over 255 characters (single line), 5,000 (multi-line), or 50 list items |
+| `UNSUPPORTED_TYPE` | The field's type is one forms cannot write, such as a file |
+| `TOO_MANY_FIELDS` | More than 20 `mvqore_form` fields in one submission |
+| `TAG_NOT_ALLOWED` | A tag is not on the store's allowlist |
+| `NOTHING_TO_SUBMIT` | A logged-in application had no answers and no tags |
+| `NOT_LOGGED_IN` | `attachCustomerFieldsForm` used by a visitor who is not logged in |
+| `SHOPIFY_REJECTED` | Shopify refused an answer, e.g. over a min/max the merchant set |
+| `TRY_AGAIN` | Shopify was briefly unavailable; resubmitting is safe |
+| `FIELDS_REJECTED` | Any other failure from `attachCustomerFieldsForm` |
 | `INVALID_SHARE_LINK` | `share_cart` payload malformed |
 | `CART_ADD_FAILED` | Shopify refused the shared line items |
 | `FAVORITES_UNAVAILABLE` | Favorite products could not be loaded |
