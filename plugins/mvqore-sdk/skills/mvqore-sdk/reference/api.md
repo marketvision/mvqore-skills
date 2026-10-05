@@ -74,7 +74,8 @@ Validates a referrer code against the server.
 ```
 
 `record` is the full server response — pass it to `persistReferrer`. Rejects with
-`INVALID_REFERRER_CODE`, `RATE_LIMITED`, `REFERRER_DATA_NOT_FOUND` or
+`INVALID_REFERRER_CODE`, `RATE_LIMITED`, `REFERRER_DATA_NOT_FOUND`,
+`UNKNOWN_ERROR` (the server refused without giving a reason) or
 `NETWORK_ERROR`.
 
 ### getActiveReferrer() → Promise
@@ -185,7 +186,9 @@ submission with `TAG_NOT_ALLOWED`, and a store with no saved allowlist ignores
 `tags`. `terms_accepted` is read from the form as a checkbox.
 
 Resolves `{ submitted: true, email, referrerCode, autoLoginTicket, autoLogin, data }`,
-where `autoLogin` is what `startAutoLogin` resolved. With auto-login on,
+where `autoLogin` is what `startAutoLogin` resolved, or
+`{ started: false, reason: "NOT_REQUESTED" }` when you passed `autoLogin: false`.
+With auto-login on,
 `onSuccess` can run while the page is already navigating away. Rejects with
 `MISSING_EMAIL`, `REGISTRATION_TOO_FAST`, `REFERRER_REQUIRED`, `EMAIL_IN_USE`,
 `PHONE_IN_USE`, `REGISTRATION_REJECTED` or `NETWORK_ERROR`, or with one of the
@@ -252,6 +255,13 @@ Rules are set by the merchant, not in theme code:
 - **At most 20 fields per submission.**
 - **Tags:** only tags on the allowlist in MV Qore admin → More → Application
   form.
+- **The merchant's own rules:** a definition can also carry a minimum, maximum,
+  length limit or pattern. Shopify enforces those when the answer is saved, and
+  the SDK cannot read them. `attachCustomerFieldsForm` reports a breach as
+  `SHOPIFY_REJECTED` with Shopify's message. `attachLeadForm` and
+  `attachRegistrationForm` report it as `LEAD_REJECTED` /
+  `REGISTRATION_REJECTED`, with no `field` and no detail, because Shopify
+  refuses the whole new customer. Mirror the rules on the inputs.
 - **Resubmission:** overwrites earlier answers, except fields the merchant
   marked "keep existing value" there.
 
@@ -287,6 +297,10 @@ Rejects with `FIELDS_TOO_FAST`, `NOT_LOGGED_IN`, `RATE_LIMITED` (more than 10 in
 a minute), `TRY_AGAIN`, `SHOPIFY_REJECTED`, `FIELDS_REJECTED`, `NETWORK_ERROR`,
 or one of the codes below.
 
+`NOT_LOGGED_IN` covers every case where the server could not identify the
+customer. In practice that is a visitor who is not signed in, or whose session
+expired while the form was open.
+
 ### Application field codes
 
 From any of the three forms. `field` names the input when one caused it
@@ -302,6 +316,7 @@ From any of the three forms. `field` names the input when one caused it
 | `TOO_MANY_FIELDS` | More than 20 fields |
 | `TAG_NOT_ALLOWED` | Tag not on the allowlist |
 | `NOTHING_TO_SUBMIT` | No answers and no tags (`attachCustomerFieldsForm` only) |
+| `INVALID_PAYLOAD` | The answers were not sent as an object. The SDK never does this; it means the request was hand-built |
 
 `TRY_AGAIN` means Shopify stayed unavailable through the server's retries.
 Resubmitting is safe: it writes the same answers again.

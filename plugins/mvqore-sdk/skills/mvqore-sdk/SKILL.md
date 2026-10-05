@@ -307,6 +307,14 @@ translate the label and leave the `value` attribute alone:
 `<option value="clinic">{{ 'apply.clinic' | t }}</option>`. A translated value
 is rejected with `INVALID_CHOICE`.
 
+**Mirror the merchant's field rules in the markup.** A metafield definition can
+carry its own rules in Shopify: a minimum or maximum, a length limit, a pattern.
+The SDK cannot see them. When an answer breaks one, the logged-in form fails
+with `SHOPIFY_REJECTED` and Shopify's message, but a lead or Create Account
+form fails with the generic `LEAD_REJECTED` / `REGISTRATION_REJECTED` and does
+not say which field. Put the same rules on the inputs (`min`, `max`,
+`maxlength`, `pattern`) so the theme's validation catches them first.
+
 **Do not hand-roll the lead POST.** The endpoint is fail-closed on bot signals the
 SDK manages. A hand-written `fetch` to it will be rejected as "not our form".
 
@@ -355,13 +363,14 @@ resolve to a safe value instead.
 | `INVALID_REFERRER_CODE` | No referrer matches that code |
 | `RATE_LIMITED` | Too many validation attempts; back off |
 | `REFERRER_DATA_NOT_FOUND` | Referrer exists but has no usable record |
+| `UNKNOWN_ERROR` | `validateReferrer` failed and the server gave no reason; treat as "try again" |
 | `MISSING_EMAIL` | Lead submitted with no email |
 | `LEAD_TOO_FAST` | Submitted under 5s after render (see above) |
 | `REGISTRATION_TOO_FAST` | Same, for a Create Account form |
 | `REFERRER_REQUIRED` | No referrer to attribute the lead to; pass `requireReferrer: false` to allow |
 | `EMAIL_IN_USE` | Already a customer — show this on the email field |
 | `PHONE_IN_USE` | Phone belongs to another customer — show this on the phone field |
-| `LEAD_REJECTED` | Rejected server-side (bot guard or captcha) |
+| `LEAD_REJECTED` | Rejected server-side: bot guard, captcha, or Shopify refusing the new customer (see `SHOPIFY_REJECTED`) |
 | `REGISTRATION_REJECTED` | Same, for a Create Account form |
 | `FIELDS_TOO_FAST` | Same, for `attachCustomerFieldsForm` |
 | `UNKNOWN_FIELD` | A `mvqore_form.<key>` input has no metafield definition; `field` names it |
@@ -372,8 +381,8 @@ resolve to a safe value instead.
 | `TOO_MANY_FIELDS` | More than 20 `mvqore_form` fields in one submission |
 | `TAG_NOT_ALLOWED` | A tag is not on the store's allowlist |
 | `NOTHING_TO_SUBMIT` | A logged-in application had no answers and no tags |
-| `NOT_LOGGED_IN` | `attachCustomerFieldsForm` used by a visitor who is not logged in |
-| `SHOPIFY_REJECTED` | Shopify refused an answer, e.g. over a min/max the merchant set |
+| `NOT_LOGGED_IN` | `attachCustomerFieldsForm` could not identify a logged-in customer. Almost always a visitor who is not signed in; ask them to log in |
+| `SHOPIFY_REJECTED` | `attachCustomerFieldsForm` only: Shopify refused an answer, e.g. over a min/max the merchant set on the field. On a lead or Create Account form the same problem arrives as `LEAD_REJECTED` / `REGISTRATION_REJECTED`, with no `field` |
 | `TRY_AGAIN` | Shopify was briefly unavailable; resubmitting is safe |
 | `FIELDS_REJECTED` | Any other failure from `attachCustomerFieldsForm` |
 | `INVALID_SHARE_LINK` | `share_cart` payload malformed |

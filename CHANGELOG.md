@@ -4,6 +4,18 @@ Versions track the `mvqore-sdk` plugin. Bump `version` in both
 `plugins/mvqore-sdk/.claude-plugin/plugin.json` and
 `.claude-plugin/marketplace.json` with every release.
 
+## 1.2.2
+
+Documentation only; no app release needed.
+
+- `SHOPIFY_REJECTED` only comes from `attachCustomerFieldsForm`. On lead and
+  Create Account forms, a breach of the merchant's own field rules arrives as
+  `LEAD_REJECTED` / `REGISTRATION_REJECTED` with no field name, so mirror those
+  rules on the inputs
+- `NOT_LOGGED_IN` covers every case where the customer could not be identified
+- Documented `UNKNOWN_ERROR`, `INVALID_PAYLOAD` and the `NOT_REQUESTED`
+  auto-login reason
+
 ## 1.2.1
 
 Documentation only; no app release needed.
