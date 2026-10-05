@@ -276,6 +276,37 @@ enabled, something must mount Friendly Captcha and put its token in a field name
 returns `{ enabled, service, siteKey }` for mounting it. Without it, submissions
 are rejected server-side.
 
+**A captcha token works once.** The server checks the captcha before anything
+else, so every submission that reaches it uses up the token, including one
+rejected for `EMAIL_IN_USE` or a bad `mvqore_form` answer. A second attempt
+with the same token fails with `LEAD_REJECTED` / `REGISTRATION_REJECTED`. Reset
+the Friendly Captcha widget in `onError` so the customer gets a fresh token
+before they resubmit.
+
+**The SDK submits whatever is in the form; it does not validate it.** Its
+submit handler ignores `required`, `pattern` and any check the theme runs
+afterwards. Register the theme's validation on the form's `submit` event
+**before** calling `attachLeadForm`, `attachRegistrationForm` or
+`attachCustomerFieldsForm`, and stop the event when the form is invalid:
+
+```js
+form.addEventListener("submit", (e) => {
+  if (!form.checkValidity()) {
+    e.preventDefault();
+    e.stopImmediatePropagation();   // keeps the SDK's handler from running
+    form.reportValidity();
+  }
+});
+MVQore.attachLeadForm(form, options);  // attached second, so it runs second
+```
+
+**Keep option values exactly as the merchant defined them.** When a
+`mvqore_form` field has a list of choices, the server compares each answer to
+that list character for character, including case. On a translated storefront,
+translate the label and leave the `value` attribute alone:
+`<option value="clinic">{{ 'apply.clinic' | t }}</option>`. A translated value
+is rejected with `INVALID_CHOICE`.
+
 **Do not hand-roll the lead POST.** The endpoint is fail-closed on bot signals the
 SDK manages. A hand-written `fetch` to it will be rejected as "not our form".
 

@@ -11,7 +11,7 @@
       "source": "./plugins/mvqore-sdk",
       "displayName": "MV Qore SDK",
       "description": "Build referral features into a custom Shopify theme with the MV Qore JS SDK: referrer toolbars, lead capture, Create Account and application forms, favorite products, cart sharing and QR codes.",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "author": {
         "name": "MarketVision"
       },

@@ -4,6 +4,16 @@ Versions track the `mvqore-sdk` plugin. Bump `version` in both
 `plugins/mvqore-sdk/.claude-plugin/plugin.json` and
 `.claude-plugin/marketplace.json` with every release.
 
+## 1.2.1
+
+Documentation only; no app release needed.
+
+- A captcha token works once: reset the widget after a failed submission
+- The SDK does not validate the form: run the theme's validation before
+  attaching the SDK
+- Choice values must match the merchant's definition exactly, so translate
+  labels, not values
+
 ## 1.2.0
 
 Requires the MV Qore app release of 2026-10-02, which serves the matching SDK.

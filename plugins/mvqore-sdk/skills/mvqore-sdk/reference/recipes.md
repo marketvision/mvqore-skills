@@ -335,10 +335,24 @@ tag to the allowlist in MV Qore admin (More → Application form):
       error.hidden = false;
     }
 
+    // Registered before the SDK attaches, so it runs first. The SDK does not
+    // validate: without this, an incomplete form is posted as it stands.
+    form.addEventListener("submit", (e) => {
+      if (!form.checkValidity()) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        form.reportValidity();
+      }
+    });
+
     const options = {
       tags: ["mvqore-application-submitted"],
       onSuccess: () => { form.hidden = true; thanks.hidden = false; },
-      onError: showError,
+      onError: (e) => {
+        showError(e);
+        // A captcha token works once, and this attempt used it.
+        resetFriendlyCaptcha(form);
+      },
     };
 
     if (form.dataset.mvqApplyForm === "existing") {
@@ -357,6 +371,12 @@ tag to the allowlist in MV Qore admin (More → Application form):
 
 Notes:
 
+- **`mountFriendlyCaptcha` and `resetFriendlyCaptcha` are yours to implement**
+  with Friendly Captcha's own script. The reset matters: every submission that
+  reaches the server uses up the token, even a rejected one.
+- **Option values must match the definition's choices exactly.** `keto` and
+  `fitness` here are the choices on `mvqore_form.specialties`. On a translated
+  storefront, translate the label text, never the `value`.
 - **`EMAIL_IN_USE` on the new-customer form means the applicant already has an
   account.** Ask them to log in, which switches them to the logged-in form. The
   server never adds answers to an existing customer based on an email typed into
