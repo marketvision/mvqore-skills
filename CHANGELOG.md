@@ -4,6 +4,17 @@ Versions track the `mvqore-sdk` plugin. Bump `version` in both
 `plugins/mvqore-sdk/.claude-plugin/plugin.json` and
 `.claude-plugin/marketplace.json` with every release.
 
+## 1.3.0
+
+Documentation only; no app release needed.
+
+- New `reference/personalization.md`: showing or tailoring content by customer
+  tag, by saved `mvqore_form` answers, or by the visitor's referrer. Covers what
+  Liquid can read and what only the SDK can, the referrer's contact details on
+  `record.node`, and why a price shown in the theme needs a matching discount in
+  Shopify
+- The skill's description now covers content shown only to tagged customers
+
 ## 1.2.2
 
 Documentation only; no app release needed.

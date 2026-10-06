@@ -1,6 +1,6 @@
 ---
 name: mvqore-sdk
-description: Build MV Qore referral features into a custom Shopify theme — referrer toolbar, referrer code input, lead capture forms with customer tags, Create Account forms with auto-login, application forms that save extra answers to customer metafields, a referrer's favorite products, cart sharing, QR codes, referrer attribution. Use whenever a Shopify theme needs referral, referrer, affiliate attribution, "who referred you", lead capture, account registration, an application or sign-up form with custom fields, favorite products, share cart or MV Qore functionality.
+description: Build MV Qore referral features into a custom Shopify theme — referrer toolbar, referrer code input, lead capture forms with customer tags, Create Account forms with auto-login, application forms that save extra answers to customer metafields, a referrer's favorite products, cart sharing, QR codes, referrer attribution, and content personalized by customer tag or referrer. Use whenever a Shopify theme needs referral, referrer, affiliate attribution, "who referred you", lead capture, account registration, an application or sign-up form with custom fields, favorite products, share cart, content or pricing shown only to tagged customers (VIP, wholesale), or MV Qore functionality.
 tags: [shopify, theme, referral, mvqore, lead-capture]
 ---
 
@@ -395,3 +395,11 @@ resolve to a safe value instead.
 See [reference/api.md](reference/api.md) for every function, argument and return
 shape, and [reference/recipes.md](reference/recipes.md) for complete, working
 section examples you can adapt.
+
+## Personalization
+
+To show or tailor content by customer tag, by a customer's saved application
+answers, or by who referred the visitor, read
+[reference/personalization.md](reference/personalization.md) first. It covers
+which of those Liquid can see and which only the SDK can, and why a price shown
+in the theme is not a discount.
