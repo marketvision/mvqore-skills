@@ -174,6 +174,59 @@ on what the theme shows.
 
 ---
 
+## Referrer accent palette
+
+The one piece of referrer context Liquid *can* read. When the merchant lets
+referrers choose an accent colour, each referrer picks one of the store's
+options, and the theme paints buttons, highlights, ticks and underlines in it.
+Text, dark surfaces, checkout and emails keep the store's colours.
+
+| Key | Holds | Set by |
+|---|---|---|
+| `shop.metafields.mvqore.accent_palettes` | The list: `{ version, enabled, default, options: [{ id, name, base, deep, ink, on, soft, softOn, bright, rgb, deepRgb }] }` | The merchant, in MV Qore |
+| `customer.metafields.mvqore.palette` | A signed-in referrer's own choice (an option id, or empty) | The referrer, in My Website › Theme |
+| `cart.attributes.mvqore_palette` | The active referrer's choice (an option id, or empty) | `persistReferrer` / the Referrer Code block |
+
+First match wins:
+
+1. a signed-in visitor's own `customer.metafields.mvqore.palette`;
+2. otherwise the cart's `mvqore_palette`;
+3. otherwise the list's `default`.
+
+Treat an id that isn't in `options`, or `enabled: false`, as the default. Because
+the choice is in Liquid, pages render in the right colours on first paint. Only
+the very first landing on a `?ref=` link can show the default, since that
+referrer is resolved in the browser.
+
+```liquid
+{%- assign palettes = shop.metafields.mvqore.accent_palettes.value -%}
+{%- assign wanted = customer.metafields.mvqore.palette.value
+      | default: cart.attributes.mvqore_palette -%}
+{%- assign accent = nil -%}
+{%- if palettes.enabled -%}
+  {%- for option in palettes.options -%}
+    {%- if option.id == wanted -%}{%- assign accent = option -%}{%- endif -%}
+  {%- endfor -%}
+{%- endif -%}
+{%- if accent -%}
+  <style>
+    :root {
+      --accent: {{ accent.base }}; --accent-deep: {{ accent.deep }};
+      --accent-ink: {{ accent.ink }}; --accent-on: {{ accent.on }};
+      --accent-soft: {{ accent.soft }}; --accent-soft-on: {{ accent.softOn }};
+      --accent-bright: {{ accent.bright }};
+    }
+  </style>
+{%- endif -%}
+```
+
+Every option arrives already checked for contrast: `on` is the label colour on
+`base` (navy or white), `deep` is hover, `ink` is the accent as text on white,
+`bright` is the accent on dark grounds. Use the tokens as given rather than
+deriving your own: some are hand-tuned.
+
+---
+
 ## Combining both
 
 A section that depends on the customer and the referrer renders in two steps:

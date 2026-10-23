@@ -52,6 +52,19 @@ store has none:
 Offer `label` as a choice only when `enabled` is true. To use it, validate and
 persist `defaultCode` like any other code.
 
+`accentPalettes` is the store's referrer accent palette list, or `null` until the
+merchant saves one. It is the same content as the `mvqore.accent_palettes` shop
+metafield, which is what a theme should read to paint pages (see
+[personalization.md](personalization.md#referrer-accent-palette)). Use this copy
+only for client-side work:
+
+```js
+{
+  version: 1, enabled: true, default: "periwinkle",
+  options: [{ id, name, base, deep, ink, on, soft, softOn, bright, rgb, deepRgb }]
+}
+```
+
 ### getBotProtection() → Promise
 
 ```js
@@ -70,8 +83,13 @@ Public fields only. Never returns the API key. Fails closed to
 Validates a referrer code against the server.
 
 ```js
-{ isValid: true, referrer: { code, userId, name, imageUrl }, record: {…} }
+{ isValid: true, referrer: { code, userId, name, imageUrl, palette }, record: {…} }
 ```
+
+`palette` is the id of the accent option the referrer chose, or `null` for the
+store's default. It is also `null` when the store doesn't let referrers choose or
+the option has been removed; the server decides, so a non-null id is always one
+in the current list.
 
 `record` is the full server response — pass it to `persistReferrer`. Rejects with
 `INVALID_REFERRER_CODE`, `RATE_LIMITED`, `REFERRER_DATA_NOT_FOUND`,
@@ -89,7 +107,9 @@ record the attribution — see recipe 0 for the site-wide capture.
 
 ### persistReferrer(result, options?)
 
-Stores the referrer and tags the cart. Pass the object returned by
+Stores the referrer and tags the cart with two attributes in one update:
+`referrerCode` (the referrer record, as an object) and `mvqore_palette` (the
+referrer's palette id, or `""` for the default). Pass the object returned by
 `validateReferrer`/`getActiveReferrer`, or the raw server record — **not**
 `result.referrer`, which throws, because the flattened view drops fields other MV
 Qore code reads back.
@@ -113,7 +133,8 @@ when the theme draws every referrer UI and no MV Qore block should react.
 
 ### clearReferrer(options?)
 
-Removes the stored referrer and clears the cart attribute. It works the same way
+Removes the stored referrer and clears both cart attributes (`referrerCode` and
+`mvqore_palette`). It works the same way
 as `persistReferrer`: MV Qore blocks on the page are told first, so their UI
 resets. If none of them cleared the referrer, the SDK clears it. Returns `"sdk"`
 or `"listener"`. Takes `{ forceWrite }`.

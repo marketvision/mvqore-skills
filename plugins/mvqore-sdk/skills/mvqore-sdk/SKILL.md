@@ -93,7 +93,7 @@ bar paints correctly on first render instead of flashing.
 try {
   const result = await MVQore.validateReferrer(input.value);
   MVQore.persistReferrer(result);        // writes storage + tags the cart
-  render(result.referrer);               // { code, userId, name, imageUrl }
+  render(result.referrer);               // { code, userId, name, imageUrl, palette }
 } catch (e) {
   if (e.code === "INVALID_REFERRER_CODE") showError("We couldn't find that code");
   else if (e.code === "RATE_LIMITED") showError("Too many tries — wait a minute");
