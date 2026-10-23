@@ -4,7 +4,7 @@ Versions track the `mvqore-sdk` plugin. Bump `version` in both
 `plugins/mvqore-sdk/.claude-plugin/plugin.json` and
 `.claude-plugin/marketplace.json` with every release.
 
-## 1.4.0
+## 1.5.0
 
 Requires the MV Qore app release that serves `getOwnReferrerCode()`.
 
@@ -17,6 +17,18 @@ Requires the MV Qore app release that serves `getOwnReferrerCode()`.
 - `/apps/proxy/customer/getReferrerCode` now returns only the signed-in
   customer's own code. Themes that called it with a `userId` should switch to
   `getOwnReferrerCode()`
+
+## 1.4.0
+
+Requires the MV Qore app release that serves referrer accent palettes.
+
+- Referrer accent palettes: a referrer picks one of the store's accent colours,
+  and the theme paints buttons, highlights and underlines in it. New section in
+  `reference/personalization.md` covers the Liquid keys and which one wins
+- `validateReferrer` and `getActiveReferrer` return the referrer's `palette`
+- `getSettings().accentPalettes` holds the store's palette list
+- `persistReferrer()` also sets the `mvqore_palette` cart attribute, and
+  `clearReferrer()` clears it
 
 ## 1.3.0
 
