@@ -4,6 +4,20 @@ Versions track the `mvqore-sdk` plugin. Bump `version` in both
 `plugins/mvqore-sdk/.claude-plugin/plugin.json` and
 `.claude-plugin/marketplace.json` with every release.
 
+## 1.4.0
+
+Requires the MV Qore app release that serves `getOwnReferrerCode()`.
+
+- `getOwnReferrerCode()` returns the signed-in customer's own referrer code, or
+  `null` when nobody is signed in. Share links from a signed-in promoter now
+  credit the promoter. Previously they carried the active referrer's code, or no
+  code when the promoter visited the store directly
+- The share-cart examples use it, falling back to the active referrer
+- New error code `REFERRER_CODE_UNAVAILABLE`
+- `/apps/proxy/customer/getReferrerCode` now returns only the signed-in
+  customer's own code. Themes that called it with a `userId` should switch to
+  `getOwnReferrerCode()`
+
 ## 1.3.0
 
 Documentation only; no app release needed.

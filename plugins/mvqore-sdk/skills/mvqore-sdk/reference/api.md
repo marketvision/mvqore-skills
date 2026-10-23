@@ -331,6 +331,23 @@ Builds a share link. With `variantId` + `quantity` it shares that one item;
 otherwise it reads the current cart. Returns `{ url }`, or **`null` when the cart
 is empty**. Line-item properties and selling plans survive the round trip.
 
+`code` becomes the link's `?ref=`, which credits whoever owns it. For a
+signed-in promoter that should be their own code (`getOwnReferrerCode()`), not
+the active referrer's.
+
+### getOwnReferrerCode() → Promise
+
+Resolves the signed-in customer's own referrer code, as a string. Resolves
+**`null`** when nobody is signed in or the customer has no code.
+
+```js
+const code = (await MVQore.getOwnReferrerCode()) ?? active?.referrer.code;
+```
+
+The server identifies the customer from Shopify's signed login, so the theme
+never sends a customer ID. Rejects with `REFERRER_CODE_UNAVAILABLE` or
+`NETWORK_ERROR`.
+
 ### importSharedCart(options?) → Promise
 
 Reads `?share_cart=` on the current page and imports it.

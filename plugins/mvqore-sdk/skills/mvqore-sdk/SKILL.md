@@ -248,12 +248,20 @@ the cards in the theme's own product-card markup.
 ### Share cart and QR
 
 ```js
-const share = await MVQore.generateShareUrl({ code: active?.referrer.code });
+// A signed-in promoter shares under their own code; anyone else passes on
+// whoever referred them.
+const own = await MVQore.getOwnReferrerCode().catch(() => null);
+const share = await MVQore.generateShareUrl({ code: own ?? active?.referrer.code });
 if (share) {                                    // null when the cart is empty
   const { dataUrl } = MVQore.generateQRCode(share.url, { size: 240, target: "#qr" });
   linkEl.href = share.url;
 }
 ```
+
+`getOwnReferrerCode()` resolves `null` for a signed-out visitor, so the same
+code works for everyone. Do not look the code up through
+`/apps/proxy/customer/getReferrerCode?userId=…`. That route is not part of the
+SDK, and it refuses any ID that is not the signed-in customer's.
 
 `target` renders the QR inline into that element; the QR encoder is built in, so
 do not add a QR library. On the page that receives a share link:
@@ -388,6 +396,7 @@ resolve to a safe value instead.
 | `INVALID_SHARE_LINK` | `share_cart` payload malformed |
 | `CART_ADD_FAILED` | Shopify refused the shared line items |
 | `FAVORITES_UNAVAILABLE` | Favorite products could not be loaded |
+| `REFERRER_CODE_UNAVAILABLE` | `getOwnReferrerCode` could not look up the code. Signed out or no code is `null`, not this |
 | `NETWORK_ERROR` | Request never completed |
 
 ## Full API

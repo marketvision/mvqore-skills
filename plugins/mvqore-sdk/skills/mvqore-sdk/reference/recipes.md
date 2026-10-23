@@ -203,8 +203,10 @@ To submit without an active referrer, pass `requireReferrer: false`.
     button.hidden = false;
 
     button.addEventListener("click", async () => {
-      const active = await MVQore.getActiveReferrer();
-      const share  = await MVQore.generateShareUrl({ code: active?.referrer.code });
+      // A signed-in promoter's link credits them; otherwise pass on the referrer.
+      const own    = await MVQore.getOwnReferrerCode().catch(() => null);
+      const active = own ? null : await MVQore.getActiveReferrer();
+      const share  = await MVQore.generateShareUrl({ code: own ?? active?.referrer.code });
       if (!share) { button.textContent = "Your cart is empty"; return; }
 
       MVQore.generateQRCode(share.url, { size: 240, target: "[data-mvq-qr]" });
